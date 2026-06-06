@@ -156,10 +156,25 @@ async function handleOpen(req, res) {
     `⏱  <b>Time:</b>  ${time} EST`,
   ].join("\n");
 
+  // Respond immediately so TradingView doesn't timeout
+  res.json({ ok: true, action: "open", symbol });
+
+  // Store pending trade right away
+  if (pending[symbol]) {
+    console.log(`[OPEN] Updated signal for ${symbol} — replacing pending with new entry`);
+  }
+  pending[symbol] = {
+    symbol, entry, sl, tp, tp1,
+    session: session || "—",
+    date: getTradingDate(),
+    ts: Date.now(),
+    imgOpen: null,
+    risk: risk || null,
+  };
+
+  // Process screenshot and Telegram async
   try {
     const chartBuffer = await getChartBuffer(symbol);
-
-    // Save open screenshot
     let imgOpen = null;
     if (chartBuffer) {
       imgOpen = saveScreenshot(chartBuffer, `open_${symbol}`);
@@ -167,26 +182,11 @@ async function handleOpen(req, res) {
     } else {
       await sendTelegram(msg);
     }
-
-    // Store pending trade — overwrites if new signal fires (updated entry)
-    if (pending[symbol]) {
-      console.log(`[OPEN] Updated signal for ${symbol} — replacing pending with new entry`);
-    }
-
-    pending[symbol] = {
-      symbol, entry, sl, tp, tp1,
-      session: session || "—",
-      date: getTradingDate(),
-      ts: Date.now(),
-      imgOpen,
-      risk: risk || null,
-    };
-
+    // Update pending with screenshot path
+    if (pending[symbol]) pending[symbol].imgOpen = imgOpen;
     console.log(`[OPEN] Pending trade stored for ${symbol}, imgOpen: ${imgOpen}`);
-    res.json({ ok: true, action: "open", symbol });
   } catch (err) {
     console.error("[OPEN] Error:", err.message);
-    res.status(500).json({ ok: false, error: err.message });
   }
 }
 
@@ -268,10 +268,8 @@ async function handleClose(req, res, code) {
     writeTrades(trades);
 
     console.log(`[CLOSE] Trade logged. imgOpen: ${imgOpen} imgClose: ${imgClose}`);
-    res.json({ ok: true, action: "close", result, symbol });
   } catch (err) {
     console.error("[CLOSE] Error:", err.message);
-    res.status(500).json({ ok: false, error: err.message });
   }
 }
 
@@ -303,11 +301,10 @@ async function handlePartial(req, res) {
       pending[symbol].tp1Hit = true;
       console.log(`[PARTIAL] Updated pending ${symbol} SL to BE: ${entry}`);
     }
-    await sendTelegram(msg);
     res.json({ ok: true, action: "partial", symbol });
+    await sendTelegram(msg);
   } catch (err) {
     console.error("[PARTIAL] Error:", err.message);
-    res.status(500).json({ ok: false, error: err.message });
   }
 }
 

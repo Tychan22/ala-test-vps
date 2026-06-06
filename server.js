@@ -132,7 +132,7 @@ function authCheck(req, res) {
 
 // ─── OPEN HANDLER ─────────────────────────────────────────────────────────────
 async function handleOpen(req, res) {
-  const { symbol = "XAUUSD", interval = "5", entry, sl, tp, session, timestamp } = req.body;
+  const { symbol = "XAUUSD", interval = "5", entry, sl, tp, tp1, session, timestamp, risk } = req.body;
   console.log("[OPEN]", req.body);
 
   const tsNum = parseInt(timestamp);
@@ -174,11 +174,12 @@ async function handleOpen(req, res) {
     }
 
     pending[symbol] = {
-      symbol, entry, sl, tp,
+      symbol, entry, sl, tp, tp1,
       session: session || "—",
       date: getTradingDate(),
       ts: Date.now(),
       imgOpen,
+      risk: risk || null,
     };
 
     console.log(`[OPEN] Pending trade stored for ${symbol}, imgOpen: ${imgOpen}`);
@@ -256,6 +257,7 @@ async function handleClose(req, res, code) {
       rr,
       imgOpen,
       imgClose,
+      risk:    pen.risk || null,
       ts:      pen.ts || Date.now(),
       orphan:  !openTrade,
       tsClose: Date.now(),

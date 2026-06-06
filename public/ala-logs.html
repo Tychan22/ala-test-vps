@@ -658,7 +658,7 @@
 <script>
 // ── CONFIG ────────────────────────────────────────────────────────────────────
 const VPS_URL = 'https://ala-test-vps-production.up.railway.app';
-const RISK    = 300; // fixed $ risk per trade
+const DEFAULT_RISK = 300; // fallback if risk not in payload
 
 // ── MATRIX ───────────────────────────────────────────────────────────────────
 const canvas = document.getElementById('matrix');
@@ -702,10 +702,13 @@ function calcRR(entry, sl, tp) {
   return risk > 0 ? (reward / risk).toFixed(2) : null;
 }
 
-function calcPnl(result, rr) {
-  if (result === 'WIN')  return +(RISK * parseFloat(rr)).toFixed(0);
-  if (result === 'LOSS') return -RISK;
-  if (result === 'BE')   return RISK; // 1R from partial
+function calcPnl(result, rr, risk) {
+  const R = parseFloat(risk) || DEFAULT_RISK;
+  const halfR = R / 2;
+  const fullRR = parseFloat(rr) || 1;
+  if (result === 'WIN')  return +((halfR) + (halfR * fullRR)).toFixed(0); // partial + remaining
+  if (result === 'LOSS') return -R;
+  if (result === 'BE')   return +halfR.toFixed(0); // only partial secured
   return null;
 }
 
@@ -961,7 +964,7 @@ async function syncFromVPS() {
     data.forEach(t => {
       if (!tsSet.has(t.ts)) {
         const rr  = calcRR(t.entry, t.sl, t.tp);
-        const pnl = calcPnl(t.result, rr);
+        const pnl = calcPnl(t.result, rr, t.risk);
         local.push({ ...t, rr, pnl });
         added++;
       }

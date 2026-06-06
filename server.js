@@ -78,7 +78,7 @@ async function getChartBuffer() {
   if (!CHART_IMG_KEY) return null;
   try {
     const res = await axios.post(
-      "https://api.chart-img.com/v2/tradingview/layout-chart/elAti8iP",
+      "https://api.chart-img.com/v2/tradingview/layout-chart/73EEecm3",
       { symbol: "OANDA:XAUUSD", interval: "5m" },
       { headers: { "x-api-key": CHART_IMG_KEY, "content-type": "application/json" }, responseType: "arraybuffer" }
     );
